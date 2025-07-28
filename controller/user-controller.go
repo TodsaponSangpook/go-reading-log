@@ -7,22 +7,20 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/todsapon/go-reading-log/config"
+	"github.com/todsapon/go-reading-log/constants"
 	"github.com/todsapon/go-reading-log/db"
 	"github.com/todsapon/go-reading-log/model"
 	"golang.org/x/crypto/bcrypt"
 )
 
-func Register(c *fiber.Ctx) error {
-	type Request struct {
-		Email    string `json:"email"`
-		Password string `json:"password"`
-		Name     string `json:"name"`
-	}
+type RegisterRequest struct {
+	Email    string `json:"email" validate:"required,email"`
+	Password string `json:"password" validate:"required,min=6"`
+	Name     string `json:"name" validate:"required"`
+}
 
-	var req Request
-	if err := c.BodyParser(&req); err != nil {
-		return fiber.ErrBadRequest
-	}
+func Register(c *fiber.Ctx) error {
+	req := c.Locals(constants.CtxKeyBody).(RegisterRequest)
 
 	// Generate hashed password
 	hashed, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
