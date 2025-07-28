@@ -19,6 +19,11 @@ type RegisterRequest struct {
 	Name     string `json:"name" validate:"required"`
 }
 
+type LoginRequest struct {
+	Email    string `validate:"required,email"`
+	Password string `validate:"required,min=6"`
+}
+
 func Register(c *fiber.Ctx) error {
 	req := c.Locals(constants.CtxKeyBody).(RegisterRequest)
 
@@ -43,15 +48,7 @@ func Register(c *fiber.Ctx) error {
 }
 
 func Login(c *fiber.Ctx) error {
-	type Request struct {
-		Email    string `json:"email"`
-		Password string `json:"password"`
-	}
-
-	var req Request
-	if err := c.BodyParser(&req); err != nil {
-		return fiber.ErrBadRequest
-	}
+	req := c.Locals(constants.CtxKeyBody).(LoginRequest)
 
 	var user model.User
 	err := db.DB.QueryRow(
