@@ -17,6 +17,10 @@ func GetDBUrl() string {
 	return os.Getenv("DATABASE_URL")
 }
 
+func GetJwtSecret() string {
+	return os.Getenv("JWT_SECRET")
+}
+
 func GetPort() string {
 	port := os.Getenv("PORT")
 	if port == "" {
