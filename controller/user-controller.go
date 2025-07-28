@@ -20,10 +20,14 @@ func Register(c *fiber.Ctx) error {
 		return fiber.ErrBadRequest
 	}
 
-	// TODO: Check error
-	hashed, _ := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+	// Generate hashed password
+	hashed, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "Failed to hash password")
+	}
 
-	_, err := db.DB.Exec(
+	// Insert user into database
+	_, err = db.DB.Exec(
 		context.Background(),
 		"INSERT INTO users (email, password_hash, name) VALUES ($1, $2, $3)",
 		req.Email, string(hashed), req.Name,
