@@ -1,9 +1,12 @@
 package main
 
 import (
+	"log"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/todsapon/go-reading-log/config"
 	"github.com/todsapon/go-reading-log/db"
+	"github.com/todsapon/go-reading-log/router"
 )
 
 func main() {
@@ -12,6 +15,6 @@ func main() {
 	defer db.DB.Close()
 
 	app := fiber.New()
-
-	app.Listen(config.GetPort())
+	router.SetupRoutes(app)
+	log.Fatal(app.Listen(config.GetPort()))
 }

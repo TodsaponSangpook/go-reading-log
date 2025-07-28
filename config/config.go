@@ -20,8 +20,8 @@ func GetDBUrl() string {
 func GetPort() string {
 	port := os.Getenv("PORT")
 	if port == "" {
-		return "8080"
+		return ":8080"
 	}
 
-	return "8080"
+	return port
 }
