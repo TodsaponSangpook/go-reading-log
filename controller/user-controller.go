@@ -79,3 +79,22 @@ func Login(c *fiber.Ctx) error {
 
 	return c.JSON(fiber.Map{"token": signed})
 }
+
+func GetProfile(c *fiber.Ctx) error {
+	token := c.Locals(constants.CtxKeyJwt).(*jwt.Token)
+	claims := token.Claims.(jwt.MapClaims)
+	userID := int(claims["user_id"].(float64))
+
+	var user model.User
+	err := db.DB.QueryRow(
+		context.Background(),
+		"SELECT * FROM get_user_profile($1)",
+		userID,
+	).Scan(&user.ID, &user.Email, &user.Name, &user.CreatedAt)
+
+	if err != nil {
+		return fiber.NewError(fiber.StatusNotFound, "User not found")
+	}
+
+	return c.JSON(user)
+}

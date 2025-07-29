@@ -15,7 +15,9 @@ func JWTMiddleware() fiber.Handler {
 		ContextKey: constants.CtxKeyJwt,
 		ErrorHandler: func(c *fiber.Ctx, err error) error {
 			log.Println(err)
-			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Unauthorized"})
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+				"error": "JWT error: " + err.Error(),
+			})
 		},
 	})
 }
