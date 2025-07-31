@@ -7,6 +7,7 @@ import (
 	jwtware "github.com/gofiber/jwt/v3"
 	"github.com/todsapon/go-reading-log/config"
 	"github.com/todsapon/go-reading-log/constants"
+	"github.com/todsapon/go-reading-log/model"
 )
 
 func JWTMiddleware() fiber.Handler {
@@ -15,9 +16,7 @@ func JWTMiddleware() fiber.Handler {
 		ContextKey: constants.CtxKeyJwt,
 		ErrorHandler: func(c *fiber.Ctx, err error) error {
 			log.Println(err)
-			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-				"error": "JWT error: " + err.Error(),
-			})
+			return model.FailedResponse(c, fiber.StatusUnauthorized, "JWT error: "+err.Error())
 		},
 	})
 }

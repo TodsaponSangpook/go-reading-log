@@ -44,7 +44,7 @@ func Register(c *fiber.Ctx) error {
 		return model.FailedResponse(c, fiber.StatusBadRequest, "Email already used")
 	}
 
-	return model.SuccessResponse[any](c, fiber.StatusCreated, "Success", nil)
+	return model.SuccessResponse[any](c, fiber.StatusCreated, nil, "")
 }
 
 func Login(c *fiber.Ctx) error {
@@ -80,7 +80,7 @@ func Login(c *fiber.Ctx) error {
 	data := fiber.Map{
 		"token": signed,
 	}
-	return model.SuccessResponse[any](c, fiber.StatusCreated, "Success", data)
+	return model.SuccessResponse[any](c, fiber.StatusOK, data, "")
 }
 
 func GetProfile(c *fiber.Ctx) error {
@@ -96,8 +96,8 @@ func GetProfile(c *fiber.Ctx) error {
 	).Scan(&user.ID, &user.Email, &user.Name, &user.CreatedAt)
 
 	if err != nil {
-		return fiber.NewError(fiber.StatusNotFound, "User not found")
+		return model.FailedResponse(c, fiber.StatusNotFound, "User not found")
 	}
 
-	return c.JSON(user)
+	return model.SuccessResponse(c, fiber.StatusOK, user, "")
 }

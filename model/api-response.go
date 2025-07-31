@@ -8,7 +8,10 @@ type APIResponse[T any] struct {
 	Data    T      `json:"data,omitempty"`
 }
 
-func SuccessResponse[T any](c *fiber.Ctx, status int, message string, data T) error {
+func SuccessResponse[T any](c *fiber.Ctx, status int, data T, message string) error {
+	if message == "" {
+		message = "Success"
+	}
 	res := APIResponse[T]{
 		Success: true,
 		Message: message,
