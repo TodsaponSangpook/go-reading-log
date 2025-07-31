@@ -22,7 +22,7 @@ func GetBooks(c *fiber.Ctx) error {
 	)
 
 	if err != nil {
-		return fiber.NewError(fiber.StatusInternalServerError, "Database query failed")
+		return model.FailedResponse(c, fiber.StatusInternalServerError, "Database query failed")
 	}
 	defer rows.Close()
 
@@ -35,9 +35,10 @@ func GetBooks(c *fiber.Ctx) error {
 			&b.StartedAt, &b.FinishedAt, &b.CreatedAt,
 		)
 		if err != nil {
-			return fiber.NewError(fiber.StatusInternalServerError, "Scan failed")
+			return model.FailedResponse(c, fiber.StatusInternalServerError, "Scan failed")
 		}
 		books = append(books, b)
 	}
-	return c.JSON(books)
+
+	return model.SuccessResponse(c, fiber.StatusOK, books, "")
 }

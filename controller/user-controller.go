@@ -30,7 +30,7 @@ func Register(c *fiber.Ctx) error {
 	// Generate hashed password
 	hashed, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	if err != nil {
-		return fiber.NewError(fiber.StatusInternalServerError, "Failed to hash password")
+		return model.FailedResponse(c, fiber.StatusInternalServerError, "Failed to hash password")
 	}
 
 	// Insert user into database
@@ -41,10 +41,10 @@ func Register(c *fiber.Ctx) error {
 	)
 
 	if err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, "Email already used")
+		return model.FailedResponse(c, fiber.StatusBadRequest, "Email already used")
 	}
 
-	return c.SendStatus(fiber.StatusCreated)
+	return model.SuccessResponse[any](c, fiber.StatusCreated, nil, "")
 }
 
 func Login(c *fiber.Ctx) error {
@@ -58,11 +58,11 @@ func Login(c *fiber.Ctx) error {
 	).Scan(&user.ID, &user.Email, &user.PasswordHash, &user.Name)
 
 	if err != nil {
-		return fiber.NewError(fiber.StatusUnauthorized, "Invalid credentials")
+		return model.FailedResponse(c, fiber.StatusUnauthorized, "Invalid credentials")
 	}
 
 	if bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.Password)) != nil {
-		return fiber.NewError(fiber.StatusUnauthorized, "Invalid credentials")
+		return model.FailedResponse(c, fiber.StatusUnauthorized, "Invalid credentials")
 	}
 
 	// generate token
@@ -74,10 +74,13 @@ func Login(c *fiber.Ctx) error {
 	signed, err := token.SignedString([]byte(config.GetJwtSecret()))
 
 	if err != nil {
-		return fiber.NewError(fiber.StatusInternalServerError, "Failed to generate token")
+		return model.FailedResponse(c, fiber.StatusInternalServerError, "Failed to generate token")
 	}
 
-	return c.JSON(fiber.Map{"token": signed})
+	data := fiber.Map{
+		"token": signed,
+	}
+	return model.SuccessResponse[any](c, fiber.StatusOK, data, "")
 }
 
 func GetProfile(c *fiber.Ctx) error {
@@ -93,8 +96,8 @@ func GetProfile(c *fiber.Ctx) error {
 	).Scan(&user.ID, &user.Email, &user.Name, &user.CreatedAt)
 
 	if err != nil {
-		return fiber.NewError(fiber.StatusNotFound, "User not found")
+		return model.FailedResponse(c, fiber.StatusNotFound, "User not found")
 	}
 
-	return c.JSON(user)
+	return model.SuccessResponse(c, fiber.StatusOK, user, "")
 }
