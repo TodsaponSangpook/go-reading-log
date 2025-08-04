@@ -4,17 +4,13 @@ import (
 	"context"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/golang-jwt/jwt/v4"
-	"github.com/todsapon/go-reading-log/constants"
 	"github.com/todsapon/go-reading-log/db"
+	"github.com/todsapon/go-reading-log/helper"
 	"github.com/todsapon/go-reading-log/model"
 )
 
 func GetBooks(c *fiber.Ctx) error {
-	token := c.Locals(constants.CtxKeyJwt).(*jwt.Token)
-	claims := token.Claims.(jwt.MapClaims)
-	userID := int(claims["user_id"].(float64))
-
+	userID := helper.GetUserIDFromCtx(c)
 	rows, err := db.DB.Query(
 		context.Background(),
 		"SELECT * FROM get_books_by_user($1)",
@@ -42,3 +38,7 @@ func GetBooks(c *fiber.Ctx) error {
 
 	return model.SuccessResponse(c, fiber.StatusOK, books, "")
 }
+
+// func CreateBook(c *fiber.Ctx) error {
+// 	userID := helper.GetUserIDFromCtx(c)
+// }
