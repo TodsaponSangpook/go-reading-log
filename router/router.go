@@ -12,6 +12,7 @@ func SetupRoutes(app *fiber.App) {
 	userRoute.Post("/login", middleware.ValidateBody[controller.LoginRequest](), controller.Login)
 	userRoute.Get("/profile", middleware.JWTMiddleware(), controller.GetProfile)
 
-	bookRoute := app.Group("/books")
-	bookRoute.Get("", middleware.JWTMiddleware(), controller.GetBooks)
+	bookRoute := app.Group("/books", middleware.JWTMiddleware())
+	bookRoute.Post("", middleware.ValidateBody[controller.CreateBookRequest](), controller.CreateBook)
+	bookRoute.Get("", controller.GetBooks)
 }
