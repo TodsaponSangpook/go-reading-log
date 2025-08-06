@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"log"
+	"strconv"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/todsapon/go-reading-log/constants"
@@ -19,6 +20,18 @@ type CreateBookRequest struct {
 	Status   string `json:"status"`
 	Rating   int    `json:"rating"`
 	Review   string `json:"review"`
+}
+
+/*
+UpdateBookRequest is used to update only provided fields.
+Pointer types allow distinguishing between omitted and empty values.
+*/
+type UpdateBookRequest struct {
+	Title    *string `json:"title"`
+	Author   *string `json:"author"`
+	Category *string `json:"category"`
+	Rating   *int    `json:"rating"`
+	Review   *string `json:"review"`
 }
 
 func GetBooks(c *fiber.Ctx) error {
@@ -73,9 +86,30 @@ func CreateBook(c *fiber.Ctx) error {
 	)
 
 	if err != nil {
-		log.Println(err)
 		return model.FailedResponse(c, fiber.StatusBadRequest, "Book already exists.")
 	}
 
 	return model.SuccessResponse[any](c, fiber.StatusCreated, nil, "")
+}
+
+func UpdateBook(c *fiber.Ctx) error {
+	bookID, err := strconv.Atoi(c.Params("id"))
+	if err != nil {
+		return model.FailedResponse(c, fiber.StatusBadRequest, "Invalid book ID.")
+	}
+
+	userID := helper.GetUserIDFromCtx(c)
+	req := c.Locals(constants.CtxKeyBody).(UpdateBookRequest)
+
+	_, err = db.DB.Exec(
+		context.Background(),
+		"CALL update_book($1, $2, $3, $4, $5, $6, $7)",
+		bookID, userID, req.Title, req.Author, req.Category, req.Rating, req.Review,
+	)
+
+	if err != nil {
+		return model.FailedResponse(c, fiber.StatusInternalServerError, "Update book failed.")
+	}
+
+	return model.SuccessResponse[any](c, fiber.StatusOK, nil, "")
 }

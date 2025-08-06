@@ -14,5 +14,6 @@ func SetupRoutes(app *fiber.App) {
 
 	bookRoute := app.Group("/books", middleware.JWTMiddleware())
 	bookRoute.Post("", middleware.ValidateBody[controller.CreateBookRequest](), controller.CreateBook)
+	bookRoute.Patch("/:id", middleware.ValidateBody[controller.UpdateBookRequest](), controller.UpdateBook)
 	bookRoute.Get("", controller.GetBooks)
 }

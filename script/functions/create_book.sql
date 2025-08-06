@@ -10,13 +10,6 @@ CREATE OR REPLACE PROCEDURE public.create_book(
 LANGUAGE plpgsql
 AS $procedure$
 	BEGIN
-		IF EXISTS(
-			SELECT 1 FROM books
-			WHERE user_id = p_user_Id AND title = P_title
-		) THEN
-			RAISE EXCEPTION 'Book "%" already exists for this user.', p_title;
-		END IF;
-
 		INSERT INTO books(
 			user_id, title, author, category,
         	status, rating, review, created_at
