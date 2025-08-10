@@ -3,7 +3,6 @@ package controller
 import (
 	"context"
 	"database/sql"
-	"log"
 	"strconv"
 
 	"github.com/gofiber/fiber/v2"
@@ -47,7 +46,7 @@ func GetBooks(c *fiber.Ctx) error {
 	)
 
 	if err != nil {
-		return model.FailedResponse(c, fiber.StatusInternalServerError, "Database query failed")
+		return model.FailedResponse(c, fiber.StatusInternalServerError, "Failed to get books.")
 	}
 	defer rows.Close()
 
@@ -63,8 +62,7 @@ func GetBooks(c *fiber.Ctx) error {
 			&startedAt, &finishedAt, &b.CreatedAt,
 		)
 		if err != nil {
-			log.Println(err)
-			return model.FailedResponse(c, fiber.StatusInternalServerError, "Scan failed")
+			return model.FailedResponse(c, fiber.StatusInternalServerError, "Failed to get books.")
 		}
 
 		if startedAt.Valid {
@@ -90,7 +88,7 @@ func CreateBook(c *fiber.Ctx) error {
 	)
 
 	if err != nil {
-		return model.FailedResponse(c, fiber.StatusBadRequest, "Book already exists.")
+		return model.FailedResponse(c, fiber.StatusBadRequest, "Failed to create book.")
 	}
 
 	return model.SuccessResponse[any](c, fiber.StatusCreated, nil, "")
@@ -112,7 +110,7 @@ func UpdateBook(c *fiber.Ctx) error {
 	)
 
 	if err != nil {
-		return model.FailedResponse(c, fiber.StatusInternalServerError, "Update book failed.")
+		return model.FailedResponse(c, fiber.StatusInternalServerError, "Failed to update book.")
 	}
 
 	return model.SuccessResponse[any](c, fiber.StatusOK, nil, "")

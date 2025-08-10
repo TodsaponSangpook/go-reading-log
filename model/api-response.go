@@ -4,8 +4,8 @@ import "github.com/gofiber/fiber/v2"
 
 type APIResponse[T any] struct {
 	Success bool   `json:"success"`
-	Message string `json:"message,omitempty"`
-	Data    T      `json:"data,omitempty"`
+	Message string `json:"message"`
+	Data    T      `json:"data"`
 }
 
 func SuccessResponse[T any](c *fiber.Ctx, status int, data T, message string) error {
