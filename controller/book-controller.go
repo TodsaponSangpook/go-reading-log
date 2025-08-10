@@ -34,6 +34,10 @@ type UpdateBookRequest struct {
 	Review   *string `json:"review"`
 }
 
+type UpdateBookStatusRequest struct {
+	Status *string `json:"status" validate:"required"`
+}
+
 func GetBooks(c *fiber.Ctx) error {
 	userID := helper.GetUserIDFromCtx(c)
 	rows, err := db.DB.Query(
@@ -109,6 +113,28 @@ func UpdateBook(c *fiber.Ctx) error {
 
 	if err != nil {
 		return model.FailedResponse(c, fiber.StatusInternalServerError, "Update book failed.")
+	}
+
+	return model.SuccessResponse[any](c, fiber.StatusOK, nil, "")
+}
+
+func UpdateBookStatus(c *fiber.Ctx) error {
+	bookID, err := strconv.Atoi(c.Params("id"))
+	if err != nil {
+		return model.FailedResponse(c, fiber.StatusBadRequest, "Invalid book ID.")
+	}
+
+	userID := helper.GetUserIDFromCtx(c)
+	req := c.Locals(constants.CtxKeyBody).(UpdateBookStatusRequest)
+
+	_, err = db.DB.Exec(
+		context.Background(),
+		"CALL update_book_status($1, $2, $3)",
+		bookID, userID, req.Status,
+	)
+
+	if err != nil {
+		return model.FailedResponse(c, fiber.StatusInternalServerError, err.Error())
 	}
 
 	return model.SuccessResponse[any](c, fiber.StatusOK, nil, "")
