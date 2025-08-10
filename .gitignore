@@ -33,3 +33,4 @@ vendor/
 docker-compose.override.yml
 
 .air.toml
+.vercel

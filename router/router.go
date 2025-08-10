@@ -7,6 +7,13 @@ import (
 )
 
 func SetupRoutes(app *fiber.App) {
+	// Health check endpoint
+	app.Get("/health", func(c *fiber.Ctx) error {
+		return c.JSON(fiber.Map{
+			"status": "ok",
+		})
+	})
+
 	userRoute := app.Group("/user")
 	userRoute.Post("/register", middleware.ValidateBody[controller.RegisterRequest](), controller.Register)
 	userRoute.Post("/login", middleware.ValidateBody[controller.LoginRequest](), controller.Login)
