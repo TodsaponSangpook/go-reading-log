@@ -6,9 +6,9 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v4"
-	"github.com/todsapon/go-reading-log/config"
 	"github.com/todsapon/go-reading-log/constants"
 	"github.com/todsapon/go-reading-log/db"
+	"github.com/todsapon/go-reading-log/helper"
 	"github.com/todsapon/go-reading-log/model"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -65,20 +65,30 @@ func Login(c *fiber.Ctx) error {
 		return model.FailedResponse(c, fiber.StatusUnauthorized, "Invalid credentials.")
 	}
 
-	// generate token
-	claims := jwt.MapClaims{
-		"user_id": user.ID,
-		"exp":     time.Now().Add(time.Hour * 24).Unix(),
-	}
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	signed, err := token.SignedString([]byte(config.GetJwtSecret()))
-
+	accessToken, err := helper.NewAccessToken(user.ID)
 	if err != nil {
-		return model.FailedResponse(c, fiber.StatusInternalServerError, "Failed to generate token.")
+		return model.FailedResponse(c, fiber.StatusInternalServerError, "Failed to generate access token.")
 	}
+
+	refreshToken, _, exp, err := helper.NewRefreshToken(user.ID)
+	// refreshToken, familyID, exp, err := helper.NewRefreshToken(user.ID)
+	if err != nil {
+		return model.FailedResponse(c, fiber.StatusInternalServerError, "Failed to generate refresh token.")
+	}
+
+	c.Cookie(&fiber.Cookie{
+		Name:     "refresh_token",
+		Value:    refreshToken,
+		HTTPOnly: false,
+		Secure:   false,
+		SameSite: "Lax",
+		Expires:  exp,
+		Path:     "/",
+	})
 
 	data := fiber.Map{
-		"token": signed,
+		"token": accessToken,
+		"exp":   time.Now().Add(helper.AccessTTL).Unix(),
 	}
 	return model.SuccessResponse[any](c, fiber.StatusOK, data, "")
 }

@@ -20,7 +20,7 @@ func Hash(s string) string {
 	return hex.EncodeToString(h[:])
 }
 
-func NewAccessToken(userID int64) (string, error) {
+func NewAccessToken(userID int) (string, error) {
 	claims := jwt.MapClaims{
 		"user_id": userID,
 		"iat":     time.Now().Unix(),
@@ -31,7 +31,7 @@ func NewAccessToken(userID int64) (string, error) {
 	return token.SignedString([]byte(config.GetJwtSecret()))
 }
 
-func NewRefreshToken(userID int64) (token string, familyID uuid.UUID, exp time.Time, err error) {
+func NewRefreshToken(userID int) (token string, familyID uuid.UUID, exp time.Time, err error) {
 	claims := jwt.MapClaims{
 		"user_id":  userID,
 		"iat":      time.Now().Unix(),
