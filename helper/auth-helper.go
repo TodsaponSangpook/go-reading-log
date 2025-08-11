@@ -1,0 +1,52 @@
+package helper
+
+import (
+	"crypto/sha256"
+	"encoding/hex"
+	"time"
+
+	"github.com/golang-jwt/jwt/v4"
+	"github.com/google/uuid"
+	"github.com/todsapon/go-reading-log/config"
+)
+
+const (
+	AccessTTL  = 15 * time.Minute
+	RefreshTTL = 30 * 24 * time.Hour
+)
+
+func Hash(s string) string {
+	h := sha256.Sum256([]byte(s))
+	return hex.EncodeToString(h[:])
+}
+
+func NewAccessToken(userID int64) (string, error) {
+	claims := jwt.MapClaims{
+		"user_id": userID,
+		"iat":     time.Now().Unix(),
+		"exp":     time.Now().Add(AccessTTL).Unix(),
+		"typ":     "access",
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	return token.SignedString([]byte(config.GetJwtSecret()))
+}
+
+func NewRefreshToken(userID int64) (token string, familyID uuid.UUID, exp time.Time, err error) {
+	claims := jwt.MapClaims{
+		"user_id":  userID,
+		"iat":      time.Now().Unix(),
+		"exp":      time.Now().Add(RefreshTTL).Unix(),
+		"typ":      "refresh",
+		"familyId": uuid.New().String(),
+		"jti":      uuid.New().String(),
+	}
+	refreshToken := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	signed, err := refreshToken.SignedString([]byte(config.GetJwtRefreshSecret()))
+	if err != nil {
+		return "", uuid.Nil, time.Time{}, err
+	}
+
+	exp = time.Now().Add(RefreshTTL)
+	familyID, _ = uuid.Parse(claims["familyId"].(string))
+	return signed, familyID, exp, nil
+}
