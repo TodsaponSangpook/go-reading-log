@@ -70,17 +70,25 @@ func Login(c *fiber.Ctx) error {
 		return model.FailedResponse(c, fiber.StatusInternalServerError, "Failed to generate access token.")
 	}
 
-	refreshToken, _, exp, err := helper.NewRefreshToken(user.ID)
-	// refreshToken, familyID, exp, err := helper.NewRefreshToken(user.ID)
+	refreshToken, exp, err := helper.NewRefreshToken(user.ID)
 	if err != nil {
 		return model.FailedResponse(c, fiber.StatusInternalServerError, "Failed to generate refresh token.")
+	}
+
+	_, err = db.DB.Exec(
+		context.Background(),
+		"CALL insert_refresh_token($1, $2, $3)",
+		user.ID, refreshToken, exp,
+	)
+	if err != nil {
+		return model.FailedResponse(c, fiber.StatusInternalServerError, "Failed to save refresh token.")
 	}
 
 	c.Cookie(&fiber.Cookie{
 		Name:     "refresh_token",
 		Value:    refreshToken,
-		HTTPOnly: false,
-		Secure:   false,
+		HTTPOnly: true,
+		Secure:   false, // Enable on production.
 		SameSite: "Lax",
 		Expires:  exp,
 		Path:     "/",

@@ -6,13 +6,12 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v4"
-	"github.com/google/uuid"
 	"github.com/todsapon/go-reading-log/config"
 )
 
 const (
 	AccessTTL  = 15 * time.Minute
-	RefreshTTL = 30 * 24 * time.Hour
+	RefreshTTL = 7 * 24 * time.Hour
 )
 
 func Hash(s string) string {
@@ -31,22 +30,19 @@ func NewAccessToken(userID int) (string, error) {
 	return token.SignedString([]byte(config.GetJwtSecret()))
 }
 
-func NewRefreshToken(userID int) (token string, familyID uuid.UUID, exp time.Time, err error) {
+func NewRefreshToken(userID int) (token string, exp time.Time, err error) {
 	claims := jwt.MapClaims{
-		"user_id":  userID,
-		"iat":      time.Now().Unix(),
-		"exp":      time.Now().Add(RefreshTTL).Unix(),
-		"typ":      "refresh",
-		"familyId": uuid.New().String(),
-		"jti":      uuid.New().String(),
+		"user_id": userID,
+		"iat":     time.Now().Unix(),
+		"exp":     time.Now().Add(RefreshTTL).Unix(),
+		"typ":     "refresh",
 	}
 	refreshToken := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	signed, err := refreshToken.SignedString([]byte(config.GetJwtRefreshSecret()))
 	if err != nil {
-		return "", uuid.Nil, time.Time{}, err
+		return "", time.Time{}, err
 	}
 
 	exp = time.Now().Add(RefreshTTL)
-	familyID, _ = uuid.Parse(claims["familyId"].(string))
-	return signed, familyID, exp, nil
+	return signed, exp, nil
 }
