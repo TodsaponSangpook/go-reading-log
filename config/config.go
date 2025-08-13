@@ -21,6 +21,10 @@ func GetJwtSecret() string {
 	return os.Getenv("JWT_SECRET")
 }
 
+func GetJwtRefreshSecret() string {
+	return os.Getenv("JWT_REFRESH_SECRET")
+}
+
 func GetPort() string {
 	port := os.Getenv("PORT")
 	if port == "" {

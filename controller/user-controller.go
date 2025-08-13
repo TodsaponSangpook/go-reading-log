@@ -9,6 +9,7 @@ import (
 	"github.com/todsapon/go-reading-log/config"
 	"github.com/todsapon/go-reading-log/constants"
 	"github.com/todsapon/go-reading-log/db"
+	"github.com/todsapon/go-reading-log/helper"
 	"github.com/todsapon/go-reading-log/model"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -65,20 +66,90 @@ func Login(c *fiber.Ctx) error {
 		return model.FailedResponse(c, fiber.StatusUnauthorized, "Invalid credentials.")
 	}
 
-	// generate token
-	claims := jwt.MapClaims{
-		"user_id": user.ID,
-		"exp":     time.Now().Add(time.Hour * 24).Unix(),
-	}
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	signed, err := token.SignedString([]byte(config.GetJwtSecret()))
-
+	accessToken, err := helper.NewAccessToken(user.ID)
 	if err != nil {
-		return model.FailedResponse(c, fiber.StatusInternalServerError, "Failed to generate token.")
+		return model.FailedResponse(c, fiber.StatusInternalServerError, "Failed to generate access token.")
 	}
+
+	refreshToken, exp, err := helper.NewRefreshToken(user.ID)
+	if err != nil {
+		return model.FailedResponse(c, fiber.StatusInternalServerError, "Failed to generate refresh token.")
+	}
+
+	_, err = db.DB.Exec(
+		context.Background(),
+		"CALL insert_refresh_token($1, $2, $3)",
+		user.ID, refreshToken, exp,
+	)
+	if err != nil {
+		return model.FailedResponse(c, fiber.StatusInternalServerError, "Failed to save refresh token.")
+	}
+
+	c.Cookie(&fiber.Cookie{
+		Name:     "refresh_token",
+		Value:    refreshToken,
+		HTTPOnly: true,
+		Secure:   false, // Enable on production.
+		SameSite: "Lax",
+		Expires:  exp,
+		Path:     "/",
+	})
 
 	data := fiber.Map{
-		"token": signed,
+		"token": accessToken,
+		"exp":   time.Now().Add(helper.AccessTTL).Unix(),
+	}
+	return model.SuccessResponse[any](c, fiber.StatusOK, data, "")
+}
+
+func RefreshToken(c *fiber.Ctx) error {
+	refreshToken := c.Cookies("refresh_token")
+	if refreshToken == "" {
+		return model.FailedResponse(c, fiber.StatusUnauthorized, "Missing refresh token.")
+	}
+
+	claims, err := helper.ParseToken(refreshToken, config.GetJwtRefreshSecret())
+	if err != nil {
+		return model.FailedResponse(c, fiber.StatusUnauthorized, "Invalid refresh token.")
+	}
+
+	typ, err := helper.GetTokenTypeFromClaims(claims)
+	if err != nil || typ != "refresh" {
+		return model.FailedResponse(c, fiber.StatusUnauthorized, "Invalid token type.")
+	}
+
+	if helper.IsTokenExpiredFromClaims(claims) {
+		return model.FailedResponse(c, fiber.StatusUnauthorized, "Refresh token expired.")
+	}
+
+	userID, err := helper.GetUserIDFromClaims(claims)
+	if err != nil {
+		return model.FailedResponse(c, fiber.StatusUnauthorized, "Invalid token payload.")
+	}
+
+	var refreshTokenExpires time.Time
+	err = db.DB.QueryRow(
+		context.Background(),
+		"SELECT * FROM get_refresh_token($1, $2)",
+		userID, refreshToken,
+	).Scan(&refreshTokenExpires)
+	if err != nil {
+		return model.FailedResponse(c, fiber.StatusUnauthorized, "Refresh token not found.")
+	}
+	if time.Now().After(refreshTokenExpires) {
+		return model.FailedResponse(c, fiber.StatusUnauthorized, "Refresh token expired")
+	}
+
+	// 3) Generate a new access token for the user
+	accessToken, err := helper.NewAccessToken(userID)
+	if err != nil {
+		return model.FailedResponse(c, fiber.StatusInternalServerError, "Failed to generate access token.")
+	}
+
+	// Return the new access token and its expiration time to the client
+	data := fiber.Map{
+		"token": accessToken,
+		"exp":   time.Now().Add(helper.AccessTTL).Unix(),
 	}
 	return model.SuccessResponse[any](c, fiber.StatusOK, data, "")
 }
