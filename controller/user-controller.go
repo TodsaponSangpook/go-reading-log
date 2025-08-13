@@ -6,6 +6,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v4"
+	"github.com/todsapon/go-reading-log/config"
 	"github.com/todsapon/go-reading-log/constants"
 	"github.com/todsapon/go-reading-log/db"
 	"github.com/todsapon/go-reading-log/helper"
@@ -94,6 +95,61 @@ func Login(c *fiber.Ctx) error {
 		Path:     "/",
 	})
 
+	data := fiber.Map{
+		"token": accessToken,
+		"exp":   time.Now().Add(helper.AccessTTL).Unix(),
+	}
+	return model.SuccessResponse[any](c, fiber.StatusOK, data, "")
+}
+
+func RefreshToken(c *fiber.Ctx) error {
+	refreshToken := c.Cookies("refresh_token")
+	if refreshToken == "" {
+		return model.FailedResponse(c, fiber.StatusUnauthorized, "Missing refresh token")
+	}
+
+	// 1) Validate the JWT signature, type, and expiration from the refresh token
+	tok, err := jwt.ParseWithClaims(refreshToken, jwt.MapClaims{}, func(t *jwt.Token) (interface{}, error) {
+		return []byte(config.GetJwtRefreshSecret()), nil
+	})
+	if err != nil || !tok.Valid {
+		// Token is invalid or signature verification failed
+		return model.FailedResponse(c, fiber.StatusUnauthorized, "Invalid refresh token")
+	}
+
+	claims := tok.Claims.(jwt.MapClaims)
+	if typ, _ := claims["typ"].(string); typ != "refresh" {
+		// The "typ" claim must be "refresh" to ensure it's not an access token
+		return model.FailedResponse(c, fiber.StatusUnauthorized, "Invalid token type")
+	}
+
+	// Check expiration from JWT claims (extra safety in case DB is tampered)
+	jwtExpUnix := int64(claims["exp"].(float64))
+	if time.Now().Unix() >= jwtExpUnix {
+		return model.FailedResponse(c, fiber.StatusUnauthorized, "Refresh token expired")
+	}
+	userID := int(claims["user_id"].(float64))
+
+	var refreshTokenExpires time.Time
+	err = db.DB.QueryRow(
+		context.Background(),
+		"SELECT * FROM get_refresh_token($1, $2)",
+		userID, refreshToken,
+	).Scan(&refreshTokenExpires)
+	if err != nil {
+		return model.FailedResponse(c, fiber.StatusUnauthorized, "Refresh token not found")
+	}
+	if time.Now().After(refreshTokenExpires) {
+		return model.FailedResponse(c, fiber.StatusUnauthorized, "Refresh token expired")
+	}
+
+	// 3) Generate a new access token for the user
+	accessToken, err := helper.NewAccessToken(userID)
+	if err != nil {
+		return model.FailedResponse(c, fiber.StatusInternalServerError, "Failed to generate access token.")
+	}
+
+	// Return the new access token and its expiration time to the client
 	data := fiber.Map{
 		"token": accessToken,
 		"exp":   time.Now().Add(helper.AccessTTL).Unix(),

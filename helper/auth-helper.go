@@ -3,6 +3,7 @@ package helper
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"fmt"
 	"time"
 
 	"github.com/golang-jwt/jwt/v4"
@@ -45,4 +46,18 @@ func NewRefreshToken(userID int) (token string, exp time.Time, err error) {
 
 	exp = time.Now().Add(RefreshTTL)
 	return signed, exp, nil
+}
+
+func ParseToken(tokenStr string, secret string) (jwt.MapClaims, error) {
+	token, err := jwt.ParseWithClaims(tokenStr, jwt.MapClaims{}, func(t *jwt.Token) (interface{}, error) {
+		return []byte(secret), nil
+	})
+	if err != nil || !token.Valid {
+		return nil, fmt.Errorf("invalid token")
+	}
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		return nil, fmt.Errorf("invalid claims format")
+	}
+	return claims, nil
 }

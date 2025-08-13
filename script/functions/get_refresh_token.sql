@@ -7,6 +7,10 @@ BEGIN
 	SELECT rt.expires_at
 	FROM refresh_token rt
 	WHERE rt.user_id = p_user_id and rt.token = p_token;
+
+	IF NOT FOUND THEN
+		RAISE EXCEPTION 'Refresh token with userID "%" not found', p_user_id;
+	END IF;
 END;
 $function$
 ;
