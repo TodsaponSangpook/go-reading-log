@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	AccessTTL  = 15 * time.Minute
+	AccessTTL  = 1 * time.Minute
 	RefreshTTL = 7 * 24 * time.Hour
 )
 

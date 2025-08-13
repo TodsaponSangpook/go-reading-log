@@ -10,6 +10,7 @@ func SetupRoutes(app *fiber.App) {
 	userRoute := app.Group("/user")
 	userRoute.Post("/register", middleware.ValidateBody[controller.RegisterRequest](), controller.Register)
 	userRoute.Post("/login", middleware.ValidateBody[controller.LoginRequest](), controller.Login)
+	userRoute.Post("/refresh-token", controller.RefreshToken)
 	userRoute.Get("/profile", middleware.JWTMiddleware(), controller.GetProfile)
 
 	bookRoute := app.Group("/books", middleware.JWTMiddleware())

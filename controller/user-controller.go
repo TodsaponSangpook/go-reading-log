@@ -105,30 +105,27 @@ func Login(c *fiber.Ctx) error {
 func RefreshToken(c *fiber.Ctx) error {
 	refreshToken := c.Cookies("refresh_token")
 	if refreshToken == "" {
-		return model.FailedResponse(c, fiber.StatusUnauthorized, "Missing refresh token")
+		return model.FailedResponse(c, fiber.StatusUnauthorized, "Missing refresh token.")
 	}
 
-	// 1) Validate the JWT signature, type, and expiration from the refresh token
-	tok, err := jwt.ParseWithClaims(refreshToken, jwt.MapClaims{}, func(t *jwt.Token) (interface{}, error) {
-		return []byte(config.GetJwtRefreshSecret()), nil
-	})
-	if err != nil || !tok.Valid {
-		// Token is invalid or signature verification failed
-		return model.FailedResponse(c, fiber.StatusUnauthorized, "Invalid refresh token")
+	claims, err := helper.ParseToken(refreshToken, config.GetJwtRefreshSecret())
+	if err != nil {
+		return model.FailedResponse(c, fiber.StatusUnauthorized, "Invalid refresh token.")
 	}
 
-	claims := tok.Claims.(jwt.MapClaims)
-	if typ, _ := claims["typ"].(string); typ != "refresh" {
-		// The "typ" claim must be "refresh" to ensure it's not an access token
-		return model.FailedResponse(c, fiber.StatusUnauthorized, "Invalid token type")
+	typ, err := helper.GetTokenTypeFromClaims(claims)
+	if err != nil || typ != "refresh" {
+		return model.FailedResponse(c, fiber.StatusUnauthorized, "Invalid token type.")
 	}
 
-	// Check expiration from JWT claims (extra safety in case DB is tampered)
-	jwtExpUnix := int64(claims["exp"].(float64))
-	if time.Now().Unix() >= jwtExpUnix {
-		return model.FailedResponse(c, fiber.StatusUnauthorized, "Refresh token expired")
+	if helper.IsTokenExpiredFromClaims(claims) {
+		return model.FailedResponse(c, fiber.StatusUnauthorized, "Refresh token expired.")
 	}
-	userID := int(claims["user_id"].(float64))
+
+	userID, err := helper.GetUserIDFromClaims(claims)
+	if err != nil {
+		return model.FailedResponse(c, fiber.StatusUnauthorized, "Invalid token payload.")
+	}
 
 	var refreshTokenExpires time.Time
 	err = db.DB.QueryRow(
@@ -137,7 +134,7 @@ func RefreshToken(c *fiber.Ctx) error {
 		userID, refreshToken,
 	).Scan(&refreshTokenExpires)
 	if err != nil {
-		return model.FailedResponse(c, fiber.StatusUnauthorized, "Refresh token not found")
+		return model.FailedResponse(c, fiber.StatusUnauthorized, "Refresh token not found.")
 	}
 	if time.Now().After(refreshTokenExpires) {
 		return model.FailedResponse(c, fiber.StatusUnauthorized, "Refresh token expired")

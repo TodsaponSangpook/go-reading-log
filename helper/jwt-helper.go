@@ -16,12 +16,12 @@ func GetUserIDFromCtx(c *fiber.Ctx) int {
 	return int(userIDFloat)
 }
 
-func GetUserIDFromClaims(claims jwt.MapClaims) (int64, error) {
+func GetUserIDFromClaims(claims jwt.MapClaims) (int, error) {
 	uid, ok := claims["user_id"].(float64)
 	if !ok {
 		return 0, fmt.Errorf("user_id not found or invalid")
 	}
-	return int64(uid), nil
+	return int(uid), nil
 }
 
 func GetTokenTypeFromClaims(claims jwt.MapClaims) (string, error) {
