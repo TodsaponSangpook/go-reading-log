@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/golang-jwt/jwt/v4"
 	"github.com/todsapon/go-reading-log/config"
 	"github.com/todsapon/go-reading-log/constants"
 	"github.com/todsapon/go-reading-log/db"
@@ -155,9 +154,7 @@ func RefreshToken(c *fiber.Ctx) error {
 }
 
 func GetProfile(c *fiber.Ctx) error {
-	token := c.Locals(constants.CtxKeyJwt).(*jwt.Token)
-	claims := token.Claims.(jwt.MapClaims)
-	userID := int(claims["user_id"].(float64))
+	userID := c.Locals(helper.ClaimUserID).(float64)
 
 	var user model.User
 	err := db.DB.QueryRow(

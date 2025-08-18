@@ -38,7 +38,7 @@ type UpdateBookStatusRequest struct {
 }
 
 func GetBooks(c *fiber.Ctx) error {
-	userID := helper.GetUserIDFromCtx(c)
+	userID := c.Locals(helper.ClaimUserID).(float64)
 	rows, err := db.DB.Query(
 		context.Background(),
 		"SELECT * FROM get_books_by_user($1)",
@@ -78,7 +78,7 @@ func GetBooks(c *fiber.Ctx) error {
 }
 
 func CreateBook(c *fiber.Ctx) error {
-	userID := helper.GetUserIDFromCtx(c)
+	userID := c.Locals(helper.ClaimUserID).(float64)
 	req := c.Locals(constants.CtxKeyBody).(CreateBookRequest)
 
 	_, err := db.DB.Exec(
@@ -100,7 +100,7 @@ func UpdateBook(c *fiber.Ctx) error {
 		return model.FailedResponse(c, fiber.StatusBadRequest, "Invalid book ID")
 	}
 
-	userID := helper.GetUserIDFromCtx(c)
+	userID := c.Locals(helper.ClaimUserID).(float64)
 	req := c.Locals(constants.CtxKeyBody).(UpdateBookRequest)
 
 	_, err = db.DB.Exec(
@@ -122,7 +122,7 @@ func UpdateBookStatus(c *fiber.Ctx) error {
 		return model.FailedResponse(c, fiber.StatusBadRequest, "Invalid book ID")
 	}
 
-	userID := helper.GetUserIDFromCtx(c)
+	userID := c.Locals(helper.ClaimUserID).(float64)
 	req := c.Locals(constants.CtxKeyBody).(UpdateBookStatusRequest)
 
 	_, err = db.DB.Exec(
