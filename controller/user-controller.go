@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/golang-jwt/jwt/v4"
 	"github.com/todsapon/go-reading-log/config"
 	"github.com/todsapon/go-reading-log/constants"
 	"github.com/todsapon/go-reading-log/db"
@@ -31,7 +30,7 @@ func Register(c *fiber.Ctx) error {
 	// Generate hashed password
 	hashed, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	if err != nil {
-		return model.FailedResponse(c, fiber.StatusInternalServerError, "Failed to hash password.")
+		return model.FailedResponse(c, fiber.StatusInternalServerError, "Failed to hash password")
 	}
 
 	// Insert user into database
@@ -42,7 +41,7 @@ func Register(c *fiber.Ctx) error {
 	)
 
 	if err != nil {
-		return model.FailedResponse(c, fiber.StatusBadRequest, "Email is already in use.")
+		return model.FailedResponse(c, fiber.StatusBadRequest, "Email is already in use")
 	}
 
 	return model.SuccessResponse[any](c, fiber.StatusCreated, nil, "")
@@ -59,21 +58,21 @@ func Login(c *fiber.Ctx) error {
 	).Scan(&user.ID, &user.Email, &user.PasswordHash, &user.Name)
 
 	if err != nil {
-		return model.FailedResponse(c, fiber.StatusUnauthorized, "User not found.")
+		return model.FailedResponse(c, fiber.StatusUnauthorized, "User not found")
 	}
 
 	if bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.Password)) != nil {
-		return model.FailedResponse(c, fiber.StatusUnauthorized, "Invalid credentials.")
+		return model.FailedResponse(c, fiber.StatusUnauthorized, "Invalid credentials")
 	}
 
 	accessToken, err := helper.NewAccessToken(user.ID)
 	if err != nil {
-		return model.FailedResponse(c, fiber.StatusInternalServerError, "Failed to generate access token.")
+		return model.FailedResponse(c, fiber.StatusInternalServerError, "Failed to generate access token")
 	}
 
 	refreshToken, exp, err := helper.NewRefreshToken(user.ID)
 	if err != nil {
-		return model.FailedResponse(c, fiber.StatusInternalServerError, "Failed to generate refresh token.")
+		return model.FailedResponse(c, fiber.StatusInternalServerError, "Failed to generate refresh token")
 	}
 
 	_, err = db.DB.Exec(
@@ -82,7 +81,7 @@ func Login(c *fiber.Ctx) error {
 		user.ID, refreshToken, exp,
 	)
 	if err != nil {
-		return model.FailedResponse(c, fiber.StatusInternalServerError, "Failed to save refresh token.")
+		return model.FailedResponse(c, fiber.StatusInternalServerError, "Failed to save refresh token")
 	}
 
 	c.Cookie(&fiber.Cookie{
@@ -105,26 +104,26 @@ func Login(c *fiber.Ctx) error {
 func RefreshToken(c *fiber.Ctx) error {
 	refreshToken := c.Cookies("refresh_token")
 	if refreshToken == "" {
-		return model.FailedResponse(c, fiber.StatusUnauthorized, "Missing refresh token.")
+		return model.FailedResponse(c, fiber.StatusUnauthorized, "Missing refresh token")
 	}
 
 	claims, err := helper.ParseToken(refreshToken, config.GetJwtRefreshSecret())
 	if err != nil {
-		return model.FailedResponse(c, fiber.StatusUnauthorized, "Invalid refresh token.")
+		return model.FailedResponse(c, fiber.StatusUnauthorized, "Invalid refresh token")
 	}
 
 	typ, err := helper.GetTokenTypeFromClaims(claims)
 	if err != nil || typ != "refresh" {
-		return model.FailedResponse(c, fiber.StatusUnauthorized, "Invalid token type.")
+		return model.FailedResponse(c, fiber.StatusUnauthorized, "Invalid token type")
 	}
 
 	if helper.IsTokenExpiredFromClaims(claims) {
-		return model.FailedResponse(c, fiber.StatusUnauthorized, "Refresh token expired.")
+		return model.FailedResponse(c, fiber.StatusUnauthorized, "Refresh token expired")
 	}
 
 	userID, err := helper.GetUserIDFromClaims(claims)
 	if err != nil {
-		return model.FailedResponse(c, fiber.StatusUnauthorized, "Invalid token payload.")
+		return model.FailedResponse(c, fiber.StatusUnauthorized, "Invalid token payload")
 	}
 
 	var refreshTokenExpires time.Time
@@ -134,7 +133,7 @@ func RefreshToken(c *fiber.Ctx) error {
 		userID, refreshToken,
 	).Scan(&refreshTokenExpires)
 	if err != nil {
-		return model.FailedResponse(c, fiber.StatusUnauthorized, "Refresh token not found.")
+		return model.FailedResponse(c, fiber.StatusUnauthorized, "Refresh token not found")
 	}
 	if time.Now().After(refreshTokenExpires) {
 		return model.FailedResponse(c, fiber.StatusUnauthorized, "Refresh token expired")
@@ -143,7 +142,7 @@ func RefreshToken(c *fiber.Ctx) error {
 	// 3) Generate a new access token for the user
 	accessToken, err := helper.NewAccessToken(userID)
 	if err != nil {
-		return model.FailedResponse(c, fiber.StatusInternalServerError, "Failed to generate access token.")
+		return model.FailedResponse(c, fiber.StatusInternalServerError, "Failed to generate access token")
 	}
 
 	// Return the new access token and its expiration time to the client
@@ -155,9 +154,7 @@ func RefreshToken(c *fiber.Ctx) error {
 }
 
 func GetProfile(c *fiber.Ctx) error {
-	token := c.Locals(constants.CtxKeyJwt).(*jwt.Token)
-	claims := token.Claims.(jwt.MapClaims)
-	userID := int(claims["user_id"].(float64))
+	userID := c.Locals(helper.ClaimUserID).(float64)
 
 	var user model.User
 	err := db.DB.QueryRow(
@@ -167,7 +164,7 @@ func GetProfile(c *fiber.Ctx) error {
 	).Scan(&user.ID, &user.Email, &user.Name, &user.CreatedAt)
 
 	if err != nil {
-		return model.FailedResponse(c, fiber.StatusNotFound, "User not found.")
+		return model.FailedResponse(c, fiber.StatusNotFound, "User not found")
 	}
 
 	return model.SuccessResponse(c, fiber.StatusOK, user, "")

@@ -38,7 +38,7 @@ type UpdateBookStatusRequest struct {
 }
 
 func GetBooks(c *fiber.Ctx) error {
-	userID := helper.GetUserIDFromCtx(c)
+	userID := c.Locals(helper.ClaimUserID).(float64)
 	rows, err := db.DB.Query(
 		context.Background(),
 		"SELECT * FROM get_books_by_user($1)",
@@ -46,7 +46,7 @@ func GetBooks(c *fiber.Ctx) error {
 	)
 
 	if err != nil {
-		return model.FailedResponse(c, fiber.StatusInternalServerError, "Failed to get books.")
+		return model.FailedResponse(c, fiber.StatusInternalServerError, "Failed to get books")
 	}
 	defer rows.Close()
 
@@ -62,7 +62,7 @@ func GetBooks(c *fiber.Ctx) error {
 			&startedAt, &finishedAt, &b.CreatedAt,
 		)
 		if err != nil {
-			return model.FailedResponse(c, fiber.StatusInternalServerError, "Failed to get books.")
+			return model.FailedResponse(c, fiber.StatusInternalServerError, "Failed to get books")
 		}
 
 		if startedAt.Valid {
@@ -78,7 +78,7 @@ func GetBooks(c *fiber.Ctx) error {
 }
 
 func CreateBook(c *fiber.Ctx) error {
-	userID := helper.GetUserIDFromCtx(c)
+	userID := c.Locals(helper.ClaimUserID).(float64)
 	req := c.Locals(constants.CtxKeyBody).(CreateBookRequest)
 
 	_, err := db.DB.Exec(
@@ -88,7 +88,7 @@ func CreateBook(c *fiber.Ctx) error {
 	)
 
 	if err != nil {
-		return model.FailedResponse(c, fiber.StatusBadRequest, "Failed to create book.")
+		return model.FailedResponse(c, fiber.StatusBadRequest, "Failed to create book")
 	}
 
 	return model.SuccessResponse[any](c, fiber.StatusCreated, nil, "")
@@ -97,10 +97,10 @@ func CreateBook(c *fiber.Ctx) error {
 func UpdateBook(c *fiber.Ctx) error {
 	bookID, err := strconv.Atoi(c.Params("id"))
 	if err != nil {
-		return model.FailedResponse(c, fiber.StatusBadRequest, "Invalid book ID.")
+		return model.FailedResponse(c, fiber.StatusBadRequest, "Invalid book ID")
 	}
 
-	userID := helper.GetUserIDFromCtx(c)
+	userID := c.Locals(helper.ClaimUserID).(float64)
 	req := c.Locals(constants.CtxKeyBody).(UpdateBookRequest)
 
 	_, err = db.DB.Exec(
@@ -110,7 +110,7 @@ func UpdateBook(c *fiber.Ctx) error {
 	)
 
 	if err != nil {
-		return model.FailedResponse(c, fiber.StatusInternalServerError, "Failed to update book.")
+		return model.FailedResponse(c, fiber.StatusInternalServerError, "Failed to update book")
 	}
 
 	return model.SuccessResponse[any](c, fiber.StatusOK, nil, "")
@@ -119,10 +119,10 @@ func UpdateBook(c *fiber.Ctx) error {
 func UpdateBookStatus(c *fiber.Ctx) error {
 	bookID, err := strconv.Atoi(c.Params("id"))
 	if err != nil {
-		return model.FailedResponse(c, fiber.StatusBadRequest, "Invalid book ID.")
+		return model.FailedResponse(c, fiber.StatusBadRequest, "Invalid book ID")
 	}
 
-	userID := helper.GetUserIDFromCtx(c)
+	userID := c.Locals(helper.ClaimUserID).(float64)
 	req := c.Locals(constants.CtxKeyBody).(UpdateBookStatusRequest)
 
 	_, err = db.DB.Exec(

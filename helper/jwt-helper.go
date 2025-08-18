@@ -4,20 +4,11 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v4"
-	"github.com/todsapon/go-reading-log/constants"
 )
 
-func GetUserIDFromCtx(c *fiber.Ctx) int {
-	token := c.Locals(constants.CtxKeyJwt).(*jwt.Token)
-	claims := token.Claims.(jwt.MapClaims)
-	userIDFloat := claims["user_id"].(float64)
-	return int(userIDFloat)
-}
-
 func GetUserIDFromClaims(claims jwt.MapClaims) (int, error) {
-	uid, ok := claims["user_id"].(float64)
+	uid, ok := claims[ClaimUserID].(float64)
 	if !ok {
 		return 0, fmt.Errorf("user_id not found or invalid")
 	}
@@ -25,7 +16,7 @@ func GetUserIDFromClaims(claims jwt.MapClaims) (int, error) {
 }
 
 func GetTokenTypeFromClaims(claims jwt.MapClaims) (string, error) {
-	typ, ok := claims["typ"].(string)
+	typ, ok := claims[ClaimType].(string)
 	if !ok {
 		return "", fmt.Errorf("token type not found")
 	}
@@ -33,7 +24,7 @@ func GetTokenTypeFromClaims(claims jwt.MapClaims) (string, error) {
 }
 
 func IsTokenExpiredFromClaims(claims jwt.MapClaims) bool {
-	exp, ok := claims["exp"].(float64)
+	exp, ok := claims[ClaimExp].(float64)
 	if !ok {
 		return true
 	}

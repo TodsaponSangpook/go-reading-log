@@ -11,8 +11,15 @@ import (
 )
 
 const (
-	AccessTTL  = 1 * time.Minute
+	AccessTTL  = 15 * time.Minute
 	RefreshTTL = 7 * 24 * time.Hour
+
+	TokenTypeAccess  = "access"
+	TokenTypeRefresh = "refresh"
+	ClaimUserID      = "user_id"
+	ClaimIat         = "iat"
+	ClaimExp         = "exp"
+	ClaimType        = "type"
 )
 
 func Hash(s string) string {
@@ -22,10 +29,10 @@ func Hash(s string) string {
 
 func NewAccessToken(userID int) (string, error) {
 	claims := jwt.MapClaims{
-		"user_id": userID,
-		"iat":     time.Now().Unix(),
-		"exp":     time.Now().Add(AccessTTL).Unix(),
-		"typ":     "access",
+		ClaimUserID: userID,
+		ClaimIat:    time.Now().Unix(),
+		ClaimExp:    time.Now().Add(AccessTTL).Unix(),
+		ClaimType:   TokenTypeAccess,
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return token.SignedString([]byte(config.GetJwtSecret()))
@@ -33,10 +40,10 @@ func NewAccessToken(userID int) (string, error) {
 
 func NewRefreshToken(userID int) (token string, exp time.Time, err error) {
 	claims := jwt.MapClaims{
-		"user_id": userID,
-		"iat":     time.Now().Unix(),
-		"exp":     time.Now().Add(RefreshTTL).Unix(),
-		"typ":     "refresh",
+		ClaimUserID: userID,
+		ClaimIat:    time.Now().Unix(),
+		ClaimExp:    time.Now().Add(RefreshTTL).Unix(),
+		ClaimType:   TokenTypeRefresh,
 	}
 	refreshToken := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	signed, err := refreshToken.SignedString([]byte(config.GetJwtRefreshSecret()))
