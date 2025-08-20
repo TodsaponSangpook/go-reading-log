@@ -24,6 +24,11 @@ type LoginRequest struct {
 	Password string `validate:"required,min=6"`
 }
 
+type ChangePasswordRequest struct {
+	OldPassword string `json:"old_password" validate:"required,min=6"`
+	NewPassword string `json:"new_password" validate:"required,min=6"`
+}
+
 func Register(c *fiber.Ctx) error {
 	req := c.Locals(constants.CtxKeyBody).(RegisterRequest)
 
@@ -45,6 +50,54 @@ func Register(c *fiber.Ctx) error {
 	}
 
 	return model.SuccessResponse[any](c, fiber.StatusCreated, nil, "")
+}
+
+func ChangePassword(c *fiber.Ctx) error {
+	userID := c.Locals(helper.ClaimUserID).(float64)
+	req := c.Locals(constants.CtxKeyBody).(ChangePasswordRequest)
+
+	var currentHash string
+	err := db.DB.QueryRow(
+		context.Background(),
+		"SELECT * FROM get_user_password($1)",
+		userID,
+	).Scan(&currentHash)
+
+	if err != nil {
+		return model.FailedResponse(c, fiber.StatusBadRequest, "User not found")
+	}
+
+	if bcrypt.CompareHashAndPassword([]byte(currentHash), []byte(req.OldPassword)) != nil {
+		return model.FailedResponse(c, fiber.StatusUnauthorized, "Old password incorrect")
+	}
+
+	newHash, err := bcrypt.GenerateFromPassword([]byte(req.NewPassword), bcrypt.DefaultCost)
+	if err != nil {
+		return model.FailedResponse(c, fiber.StatusInternalServerError, "Failed to hash password")
+	}
+
+	_, err = db.DB.Exec(
+		context.Background(),
+		"CALL update_user_password($1, $2)",
+		userID, string(newHash),
+	)
+	if err != nil {
+		return model.FailedResponse(c, fiber.StatusInternalServerError, "Failed to update password")
+	}
+	_, _ = db.DB.Exec(
+		context.Background(),
+		"CALL delete_refresh_token_by_user($1)",
+		userID,
+	)
+
+	c.Cookie(&fiber.Cookie{
+		Name:    "refresh_token",
+		Value:   "",
+		Expires: time.Now().Add(helper.RefreshTTL),
+		Path:    "/",
+	})
+
+	return model.SuccessResponse[any](c, fiber.StatusOK, nil, "Password changed")
 }
 
 func Login(c *fiber.Ctx) error {
